@@ -1,10 +1,12 @@
-import os
 import logging
+import os
 import datetime from datetime
+
+from dotenv import load_dotenv
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import col, when, lit
 from pyspark.sql.types import DecimalType, TimestampType
-from dotenv import load_dotenv
+
 from config import HIGH_RISK_COUNTRIES, HIGH_AMOUNT_THRESHOLD
 
 load_dotenv()
@@ -41,10 +43,10 @@ def find_new_files(directory: str) -> list[str]| None:
                  for filename in os.listdir(directory)
                  if filename.endswith('.csv') and os.path.isfile(os.path.join(directory, filename))]
     except FileNotFoundError as e:
-        logging.error(f'{e} - `{directory}` does not exist')
+        logging.error(f"{e} - `{directory}` does not exist")
         return None
     if not files:
-        logging.info('no transaction files found')
+        logging.info("no transaction files found")
         return None
 
     return files
@@ -122,7 +124,7 @@ def load_data(df: DataFrame, table_name: str, mode: str = "append"):
             .option("driver", "org.postgresql.Driver") \
             .option("isolationLevel", "NONE")\
         .mode(mode).save()
-        logging.info(f'saving to DB: {table_name} successed')
+        logging.info(f"saving to DB: {table_name} successed")
 
     except Exception as e:
         logging.critical(f"exception: {e} - saving to db failed for table: '{table_name}' ", exc_info=True)
