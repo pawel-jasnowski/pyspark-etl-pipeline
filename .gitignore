@@ -1,0 +1,23 @@
+#env var
+.env
+
+venv/
+/venv/
+
+
+#cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+
+#pycharm files
+.idea/
+
+# data
+data/
+
+# logs
+logs/

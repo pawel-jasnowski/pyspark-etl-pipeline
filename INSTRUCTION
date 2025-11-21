@@ -1,0 +1,8 @@
+1. start docker desktop
+2. pycharm terminal type: docker compose start
+3. run data generator to generate some new transaction file
+4. run etl_pipeline
+5. check result in DB
+6. when finished - type: docker compose stop // docker compose down : Zatrzymuje działające kontenery.
+                                                                Usuwa te kontenery oraz sieć, którą dla nich stworzył.
+                                                                    Domyślnie, docker compose down nie usuwa wolumenów

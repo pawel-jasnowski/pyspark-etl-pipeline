@@ -1,0 +1,7 @@
+pyspark          #pyspark
+faker           # fake data generation
+psycopg2-binary # driver for  PostgreSQL
+python-dotenv   #  env
+pytest          # test unit
+pydantic        #pydantic
+timetable
