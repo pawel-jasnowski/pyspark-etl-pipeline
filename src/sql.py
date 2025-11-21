@@ -14,7 +14,7 @@ def create_db_engine():
     db_name = os.getenv("DB_NAME")
 
     if not all([db_user, db_password, db_host, db_port, db_name ]):
-        raise ValueError (f"ERROR: {e} during loading data from .env file")
+        raise ValueError (f"ERROR during loading data from .env file")
 
     connection_str = (f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}")
 
