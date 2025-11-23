@@ -21,7 +21,7 @@ def random_timestamp_generator():
     return random_datetime.isoformat()
 
 def transaction_generator(customer_ids):
-    """ transaction_ID , customer_id, amount, countru_code, timstamp"""
+    """ transaction_ID , customer_id, amount, country_code, timestamp"""
 
     customer_id = random.choice(customer_ids) # from the customer list
     is_suspicious = random.random() < 0.03  #less than 3%
@@ -54,7 +54,7 @@ def transaction_generator(customer_ids):
 def main(num_transactions = 1000):
     """ main transaction generator"""
 
-    customer_ids = [str(uuid.uuid4()) for _ in range(100)]          #list of customers
+    customer_ids = [str(uuid.uuid4()) for _ in range(100)]          #list of customers - random UUID
     transactions = [transaction_generator(customer_ids) for _ in range(num_transactions)]   # transaction generator call
 
     output_dir = 'data/raw'

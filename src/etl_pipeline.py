@@ -1,6 +1,6 @@
 import os
 import logging
-import datetime from datetime
+# import datetime from datetime
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import col, when, lit
 from pyspark.sql.types import DecimalType, TimestampType
