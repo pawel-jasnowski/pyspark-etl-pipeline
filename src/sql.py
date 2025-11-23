@@ -4,7 +4,6 @@ from sqlalchemy import create_engine, text
 
 load_dotenv()
 
-
 def create_db_engine():
 
     db_user = os.getenv("DB_USER")
