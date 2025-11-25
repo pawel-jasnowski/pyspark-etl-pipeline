@@ -1,10 +1,13 @@
+import logging
 import os
+import psycopg2
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, text
+from datetime import datetime
+
 
 load_dotenv()
 
-def create_db_engine():
+def create_db_connection():
 
     db_user = os.getenv("DB_USER")
     db_password = os.getenv("DB_PASSWORD")
@@ -15,13 +18,16 @@ def create_db_engine():
     if not all([db_user, db_password, db_host, db_port, db_name ]):
         raise ValueError (f"ERROR during loading data from .env file")
 
-    connection_str = (f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}")
-
     try:
-        engine = create_engine(connection_str) #db engine creation
-        with engine.connect() as connection:
-            print(f"connection to db using engine ok")
-        return engine
+        conn = psycopg2.connect(
+            dbname=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            host=os.getenv("DB_HOST"),
+            port=os.getenv("DB_PORT")
+        )
+
+        return conn
     except Exception as e:
         print(f"error during engine creation: {e}")
         return None
@@ -29,9 +35,23 @@ def create_db_engine():
 
 def main():
 
-    engine = create_db_engine()
-    if engine:
-        print('db engine is ready to work')
+    try:
+        conn = create_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute(f"select * from transactions "
+                           f"where alert_reason ='High Risk Country Transaction'"
+                           f"and country_code ='AF';")
+            records = cursor.fetchall()
+            for row in records:
+                print(row)
+                print("closing context manager")
+    except psycopg2.Error as e:
+        print("error: {e}")
+    finally:
+        if conn:
+            conn.close()
+            print("closing connection to DB")
+
 
 if __name__ == "__main__":
     main()

@@ -1,13 +1,16 @@
 import logging
 import os
-import datetime from datetime
+import psycopg2
+from datetime import datetime
 
 from dotenv import load_dotenv
 from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.functions import col, when, lit
+from pyspark.sql.functions import col, when, lit, current_timestamp
 from pyspark.sql.types import DecimalType, TimestampType
 
 from config import HIGH_RISK_COUNTRIES, HIGH_AMOUNT_THRESHOLD
+
+#TODO implementacja połączenia do bazy przed TRANSOFORM - sprawdzenie SCHEMA na bazie
 
 load_dotenv()
 
@@ -19,7 +22,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler(log_file_path, mode='a'), # write to pipeline.log
+        logging.FileHandler(log_file_path, mode='a'), # write to pipeline.log // append to file
         logging.StreamHandler()             # print to console
     ]
 )

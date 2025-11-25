@@ -28,9 +28,9 @@ def transaction_generator(customer_ids):
 
     if is_suspicious:  # transaction is suspicious
 
-        anomaly_type = random.choice(['amount', 'risk_country'])
+        alert_type = random.choice(['amount', 'risk_country'])
 
-        if anomaly_type == 'amount':
+        if alert_type == 'amount':
             amount = round(random.uniform(15000.0, 50000.0), 2)
             country_code = fake.country_code()
 
