@@ -10,7 +10,7 @@ from pyspark.sql.types import DecimalType, TimestampType
 
 from config import HIGH_RISK_COUNTRIES, HIGH_AMOUNT_THRESHOLD
 
-#TODO implementacja połączenia do bazy przed TRANSOFORM - sprawdzenie SCHEMA na bazie
+#TODO implementacja połączenia do bazy przed TRANSOFORM - sprawdzenie SCHEMA na bazie i dodanie pole LAST_TIME_UPDATE
 
 load_dotenv()
 
