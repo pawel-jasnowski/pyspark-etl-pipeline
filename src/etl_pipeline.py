@@ -1,7 +1,9 @@
 import logging
 import os
 import psycopg2
+
 from datetime import datetime
+from typing import Optional
 
 from dotenv import load_dotenv
 from pyspark.sql import SparkSession, DataFrame
@@ -132,6 +134,74 @@ def load_data(df: DataFrame, table_name: str, mode: str = "append"):
     except Exception as e:
         logging.critical(f"exception: {e} - saving to db failed for table: '{table_name}' ", exc_info=True)
         raise e
+
+def db_schema(table_name:str, df_schema: dict):
+    """ensure to update db_Schema if needed"""
+
+    conn = None
+    cur = None
+    try:
+        conn = psycopg2.connect(
+            dbname=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            host=os.getenv("DB_HOST"),
+            port=os.getenv("DB_PORT")
+        )
+        cur = conn.cursor()
+        #existing columns in db:
+        cur.execute(f"SELECT column_name FROM information_schema.columns WHERE table_schema ='public' and table_name = '{table_name}';")
+        existing_columns = {row[0] for row in cur.fetchall()}
+
+        spark_to_sql_map = {
+            'StringType()': 'VARCHAR(255)',
+            'DecimalType(18,2)': 'DECIMAL(18, 2)',
+            'TimestampType()': 'TIMESTAMP',
+            'LongType()': 'BIGINT',
+            'IntegerType()': 'INTEGER',
+            'DoubleType()': 'DOUBLE PRECISION'
+        }
+
+        df_columns = set(df_schema.keys())
+        missing_columns = df_columns - existing_columns
+
+        if not missing_columns:
+            logging.info(f"Schema for table '{table_name}' is up to date. No changes needed.")
+            return
+
+        logging.warning(f"Found missing columns in table '{table_name}': {missing_columns}. Starting migration.")
+
+        # Dodaj każdą brakującą kolumnę
+        for column_name in missing_columns:
+            # Przekształcamy obiekt typu Spark na string, aby go znaleźć w mapie
+            spark_type_str = str(df_schema[column_name])
+            sql_type = spark_to_sql_map.get(spark_type_str, 'TEXT')  # Domyślnie TEXT
+
+            alter_sql = f'ALTER TABLE public."{table_name}" ADD COLUMN "{column_name}" {sql_type};'
+            logging.info(f"Executing: {alter_sql}")
+            cur.execute(alter_sql)
+
+        # Zatwierdź zmiany w bazie danych
+        conn.commit()
+        logging.info(f"Schema migration for '{table_name}' completed successfully.")
+
+    except psycopg2.errors.UndefinedTable:
+    # Błąd, gdy tabela nie istnieje - to jest OK. Spark ją stworzy.
+    logging.warning(f"Table '{table_name}' does not exist. Spark will create it automatically.")
+    if conn:
+        conn.rollback()  # Wycofaj transakcję
+    except Exception as e:
+        logging.error(f"Error during schema migration for table '{table_name}'.", exc_info=True)
+    if conn:
+        conn.rollback()
+        raise e
+    finally:
+    # ZAWSZE zamykaj kursor i połączenie
+    if cur:
+        cur.close()
+    if conn:
+        conn.close()
+
 
 def main():
     """main"""
