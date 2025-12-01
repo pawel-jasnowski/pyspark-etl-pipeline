@@ -4,8 +4,8 @@
            image: postgres:13
            container_name: aml_postgres
            environment:
-             POSTGRES_USER: pawel_j
-             POSTGRES_PASSWORD: natalia_1997
+             POSTGRES_USER: user
+             POSTGRES_PASSWORD: password
              POSTGRES_DB: aml_db
            ports:
              - "5432:5432"
