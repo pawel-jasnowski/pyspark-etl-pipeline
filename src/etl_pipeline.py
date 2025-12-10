@@ -1,6 +1,7 @@
 # src/etl_pipeline.py
 import logging
 import os
+import traceback
 import zipfile
 import sys
 import psycopg2
@@ -26,27 +27,27 @@ python_executable = sys.executable
 os.environ['PYSPARK_PYTHON'] = python_executable
 os.environ['PYSPARK_DRIVER_PYTHON'] = python_executable
 
-logging.info(f"PYSPARK_PYTHON set to: {python_executable}")
-
-LOG_DIR = "logs"
-LOG_FILE = "pipeline.log"
-os.makedirs(LOG_DIR, exist_ok=True)
-log_file_path = os.path.join(LOG_DIR, LOG_FILE)
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(log_file_path, mode='a'), # write to pipeline.log // append to file
-        logging.StreamHandler()             # print to console
-    ]
-)
+print(f"PYSPARK_PYTHON set to: {python_executable}")
+# 
+# LOG_DIR = "logs"
+# LOG_FILE = "pipeline.log"
+# os.makedirs(LOG_DIR, exist_ok=True)
+# log_file_path = os.path.join(LOG_DIR, LOG_FILE)
+# logging.basicConfig(
+#     level=print,
+#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+#     handlers=[
+#         logging.FileHandler(log_file_path, mode='a'), # write to pipeline.log // append to file
+#         logging.StreamHandler()             # print to console
+#     ]
+# )
 
 def zip_source_for_spark(source_dir: str = "src", zip_name: str = "src.zip"):
     """
     Packs the source directory into a zip file for Spark to distribute to workers.
     This ensures that UDFs have access to all necessary modules.
     """
-    logging.info(f"source directory for ZIP '{source_dir}' into '{zip_name}' for Spark...")
+    print(f"source directory for ZIP '{source_dir}' into '{zip_name}' for Spark...")
 
     # pathlib to work with paths
     source_path = Path(source_dir)
@@ -58,7 +59,7 @@ def zip_source_for_spark(source_dir: str = "src", zip_name: str = "src.zip"):
             # np. 'src/models.py' jest zapisywane jako 'models.py' w archiwum
             zipf.write(file_path, file_path.relative_to(source_path))
 
-    logging.info("source code packaged successfully")
+    print("source code packed successfully")
     return str(zip_path)
 
 # def create_spark_session() -> SparkSession:   # BACKUP
@@ -76,7 +77,7 @@ def create_spark_session() -> SparkSession:
     Packs the source code and creates a Spark session configured
     to distribute the code to workers.
     """
-    logging.info("creating Spark session")
+    print("creating Spark session")
 
     # zip source code
     py_files_zip = zip_source_for_spark()
@@ -89,7 +90,7 @@ def create_spark_session() -> SparkSession:
         .config("spark.submit.pyFiles", py_files_zip) \
         .getOrCreate()
 
-    logging.info("spark session created successfully")
+    print("spark session created successfully")
     return spark
 
 #validation schema for @udf
@@ -120,16 +121,16 @@ def validate_transaction(struct_col) -> dict:
 
 def find_new_files(directory: str) -> list[str]| None:
     """finding TRANSACTION files to be processed"""
-    logging.info(f"searching for files to be processed in {directory}")
+    print(f"searching for files to be processed in {directory}")
     try:
         files = [os.path.join(directory, filename)
                  for filename in os.listdir(directory)
                  if filename.endswith('.csv') and os.path.isfile(os.path.join(directory, filename))]
     except FileNotFoundError as e:
-        logging.error(f"{e} - `{directory}` does not exist")
+        print(f"{e} - `{directory}` does not exist")
         return None
     if not files:
-        logging.info("no transaction files found")
+        print("no transaction files found")
         return None
 
     return files
@@ -191,7 +192,7 @@ def extract_data(spark: SparkSession, file_path: str) -> DataFrame:
 #     return df_with_alerts, df_alerts
 
 def transform_data(df: DataFrame) -> (DataFrame, DataFrame, DataFrame):
-    logging.info("Starting Pydantic validation...")
+    print("Starting Pydantic validation...")
     df_with_validation = df.withColumn("validation_result", validate_transaction(struct(*df.columns)))
 
     valid_df = df_with_validation.filter(col("validation_result.is_valid") == True).drop("validation_result")
@@ -203,13 +204,13 @@ def transform_data(df: DataFrame) -> (DataFrame, DataFrame, DataFrame):
     invalid_df.cache()
     valid_count = valid_df.count()
     invalid_count = invalid_df.count()
-    logging.info(f"Validation finished. Valid rows: {valid_count}, Invalid rows: {invalid_count}")
+    print(f"Validation finished. Valid rows: {valid_count}, Invalid rows: {invalid_count}")
 
     if invalid_count > 0:
-        logging.warning("Found invalid records. Sample of errors (JSON format):")
+        print("Found invalid records. Sample of errors (JSON format):")
         invalid_df.select("error_details").show(truncate=False)
 
-    logging.info("Transforming valid data...")
+    print("Transforming valid data...")
     transformed_df = valid_df.withColumn("amount", col("amount").cast(DecimalType(18, 2))) \
         .withColumn("timestamp", col("timestamp").cast(TimestampType()))
 
@@ -218,7 +219,7 @@ def transform_data(df: DataFrame) -> (DataFrame, DataFrame, DataFrame):
 
     df_with_alerts = transformed_df.withColumn("alert_reason", alerts_logic)
     alerts_df = df_with_alerts.filter(col("alert_reason").isNotNull())
-    logging.info("Transformation finished.")
+    print("Transformation finished.")
     return df_with_alerts, alerts_df, invalid_df
 
 
@@ -227,7 +228,7 @@ def load_data(df: DataFrame, table_name: str, mode: str = "append"):
 
     db_url = f"jdbc:postgresql://{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
 
-    logging.info(f"saving data to db table: {table_name}")
+    print(f"saving data to db table: {table_name}")
     try:
     # data preparation
         df.write.format("jdbc") \
@@ -238,10 +239,11 @@ def load_data(df: DataFrame, table_name: str, mode: str = "append"):
             .option("driver", "org.postgresql.Driver") \
             .option("isolationLevel", "NONE")\
         .mode(mode).save()
-        logging.info(f"saving to DB: {table_name} successed")
+        print(f"saving to DB: {table_name} successed")
 
     except Exception as e:
-        logging.critical(f"exception: {e} - saving to db failed for table: '{table_name}' ", exc_info=True)
+        print(f"exception: {e} - saving to db failed for table: '{table_name}' ")
+        traceback.print_exc()
         raise e
 
 # def db_schema(table_name:str, df_schema: dict):
@@ -275,10 +277,10 @@ def load_data(df: DataFrame, table_name: str, mode: str = "append"):
 #         missing_columns = df_columns - existing_columns
 #
 #         if not missing_columns:
-#             logging.info(f"Schema for table '{table_name}' is up to date. No changes needed.")
+#             print(f"Schema for table '{table_name}' is up to date. No changes needed.")
 #             return
 #
-#         logging.warning(f"Found missing columns in table '{table_name}': {missing_columns}. Starting migration.")
+#         print(f"Found missing columns in table '{table_name}': {missing_columns}. Starting migration.")
 #
 #         # Dodaj każdą brakującą kolumnę
 #         for column_name in missing_columns:
@@ -287,20 +289,21 @@ def load_data(df: DataFrame, table_name: str, mode: str = "append"):
 #             sql_type = spark_to_sql_map.get(spark_type_str, 'TEXT')  # Domyślnie TEXT
 #
 #             alter_sql = f'ALTER TABLE public."{table_name}" ADD COLUMN "{column_name}" {sql_type};'
-#             logging.info(f"Executing: {alter_sql}")
+#             print(f"Executing: {alter_sql}")
 #             cur.execute(alter_sql)
 #
 #         # Zatwierdź zmiany w bazie danych
 #         conn.commit()
-#         logging.info(f"Schema migration for '{table_name}' completed successfully.")
+#         print(f"Schema migration for '{table_name}' completed successfully.")
 #
 #     except psycopg2.errors.UndefinedTable:
 #     # Błąd, gdy tabela nie istnieje - to jest OK. Spark ją stworzy.
-#     logging.warning(f"Table '{table_name}' does not exist. Spark will create it automatically.")
+#     print(f"Table '{table_name}' does not exist. Spark will create it automatically.")
 #     if conn:
 #         conn.rollback()  # Wycofaj transakcję
 #     except Exception as e:
-#         logging.error(f"Error during schema migration for table '{table_name}'.", exc_info=True)
+#         print(f"Error during schema migration for table '{table_name}'.")
+#         traceback.print_exc()
 #     if conn:
 #         conn.rollback()
 #         raise e
@@ -314,7 +317,7 @@ def load_data(df: DataFrame, table_name: str, mode: str = "append"):
 
 # def main():           ## BCKUP
 #     """main"""
-#     logging.info("=========ETL PROCESSING START=========")
+#     print("=========ETL PROCESSING START=========")
 #     spark = None
 #     try:
 #         spark = create_spark_session()
@@ -322,16 +325,16 @@ def load_data(df: DataFrame, table_name: str, mode: str = "append"):
 #         files = find_new_files(raw_data_dir)        # list of files to be processed
 #
 #         if not files:
-#             logging.info("no files for processing")
+#             print("no files for processing")
 #             spark.stop()
 #             return
 #
-#         logging.info(f"number of files to processed: {len(files)}")
+#         print(f"number of files to processed: {len(files)}")
 #
 #         # ETL
 #         # PROCESSING EVERY FILE FOUNd IN DATa/RAW folder
 #         for file_path in files:
-#             logging.info(f"processing of: {file_path}")
+#             print(f"processing of: {file_path}")
 #             try:
 #                 #EXTRACT
 #                 raw_df = extract_data(spark, file_path)
@@ -342,26 +345,28 @@ def load_data(df: DataFrame, table_name: str, mode: str = "append"):
 #                 only_alerts_transactions.cache()
 #                 if only_alerts_transactions.count() > 0:
 #                     load_data(only_alerts_transactions, "alerts", mode="append")
-#                 else: logging.info("no alerts found to save in db")
+#                 else: print("no alerts found to save in db")
 #
 #                 move_file(file_path, success=True)
 #
 #             except Exception as e:
-#                 logging.critical(f"critical error on file processing :{file_path}", exc_info=True)
+#                 print(f"critical error on file processing :{file_path}")
+#                 traceback.print_exc()
 #                 move_file(file_path, success=False)
 #                 continue        #move to next file
 #
 #     except Exception as e:
-#         logging.critical(f"critical error during SPARK session starting", exc_info=True)
+#         print(f"critical error during SPARK session starting")
+#         traceback.print_exc()
 #
 #     finally:
 #         if spark:
-#             logging.info("job is finished ... stoping SPARK")
+#             print("job is finished ... stoping SPARK")
 #             spark.stop()
-#             logging.info("=========ETL PROCESSING END=========")
+#             print("=========ETL PROCESSING END=========")
 
 def main():
-    logging.info("\n=============================================\n"
+    print("\n=============================================\n"
                  "=========    ETL PROCESSING START     =========\n"
                  "=============================================")
     spark = None
@@ -371,13 +376,13 @@ def main():
         files_to_process = find_new_files(raw_data_dir)
 
         if not files_to_process:
-            logging.info("No new files for processing.")
+            print("No new files for processing.")
             return
 
-        logging.info(f"Number of files to process: {len(files_to_process)}")
+        print(f"Number of files to process: {len(files_to_process)}")
 
         for file_path in files_to_process:
-            logging.info(f"----- Processing file: {os.path.basename(file_path)} -----")
+            print(f"----- Processing file: {os.path.basename(file_path)} -----")
             try:
                 raw_df = extract_data(spark, file_path)
 
@@ -391,30 +396,31 @@ def main():
                 alerts_only_df.cache()
                 alerts_count = alerts_only_df.count()
                 if alerts_count > 0:
-                    logging.info(f"Found {alerts_count} alerts. Loading to 'alerts' table.")
+                    print(f"Found {alerts_count} alerts. Loading to 'alerts' table.")
                     load_data(alerts_only_df, "alerts", mode="append")
                 else:
-                    logging.info("No alerts found in this file.")
+                    print("No alerts found in this file.")
 
                 # Zapisujemy błędne rekordy do kwarantanny (jeśli istnieją)
                 invalid_records_df.cache()
                 invalid_count = invalid_records_df.count()
                 if invalid_count > 0:
-                    logging.warning(f"Found {invalid_count} invalid records. Loading to 'quarantine' table.")
+                    print(f"Found {invalid_count} invalid records. Loading to 'quarantine' table.")
                     load_data(invalid_records_df, "quarantine", mode="append")
 
                 move_file(file_path, success=True)
 
             except Exception as e:
-                logging.critical(f"Critical error during processing file: {file_path}", exc_info=True)
+                print(f"Critical error during processing file: {file_path}")
+                traceback.print_exc()
                 move_file(file_path, success=False)
                 continue
 
     finally:
         if spark:
-            logging.info("Job finished... stopping Spark session.")
+            print("Job finished... stopping Spark session.")
             spark.stop()
-        logging.info("\n=============================================\n"
+        print("\n=============================================\n"
                      "=========     ETL PROCESSING END      =========\n"
                      "=============================================")
 
