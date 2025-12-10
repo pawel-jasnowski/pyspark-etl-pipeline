@@ -1,9 +1,9 @@
+# src/sql.py
 import logging
 import os
 import psycopg2
 from dotenv import load_dotenv
 from datetime import datetime
-
 
 load_dotenv()
 
@@ -38,7 +38,7 @@ def main():
     try:
         conn = create_db_connection()
         with conn.cursor() as cursor:
-            cursor.execute(f"select * from transactions "
+            cursor.execute(f"select * from transactions"
                            f"where alert_reason ='High Risk Country Transaction'"
                            f"and country_code ='AF';")
             records = cursor.fetchall()
