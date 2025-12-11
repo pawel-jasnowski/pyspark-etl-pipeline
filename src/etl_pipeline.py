@@ -22,22 +22,6 @@ python_executable = sys.executable
 os.environ["PYSPARK_PYTHON"] = python_executable
 os.environ["PYSPARK_DRIVER_PYTHON"] = python_executable
 
-# print(f"PYSPARK_PYTHON set to: {python_executable}")
-#
-# LOG_DIR = "logs"
-# LOG_FILE = "pipeline.log"
-# os.makedirs(LOG_DIR, exist_ok=True)
-# log_file_path = os.path.join(LOG_DIR, LOG_FILE)
-# logging.basicConfig(
-#     level=print,
-#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-#     handlers=[
-#         logging.FileHandler(log_file_path, mode='a'), # write to pipeline.log // append to file
-#         logging.StreamHandler()             # print to console
-#     ]
-# )
-
-
 def zip_source_for_spark(source_dir: str = "src", zip_name: str = "src.zip"):
     """
     Packs the source directory into a zip file for Spark to distribute to workers.
@@ -445,7 +429,12 @@ def main():
                     print(
                         f"Found {invalid_count} invalid records. Loading to 'quarantine' table."
                     )
-                    load_data(invalid_records_df, "quarantine", mode="append")
+                    quarantine_df = invalid_records_df.select(
+                        [col(c).cast(StringType()) for c in invalid_records_df.columns]
+                    )
+                    print(f"schema for quarantine table is:")
+                    quarantine_df.printSchema()
+                    load_data(quarantine_df, "quarantine", mode="append")
 
                 move_file(file_path, success=True)
 
