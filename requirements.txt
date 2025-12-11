@@ -25,3 +25,6 @@ typing_extensions 4.15.0
 typing-inspection 0.4.2
 tzdata            2025.2
 wheel             0.37.1
+black
+mypy
+isort

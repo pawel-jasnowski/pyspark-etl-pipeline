@@ -3,7 +3,7 @@ import os
 
 print("SPARK test")
 
-#env
+# env
 print(f"JAVA_HOME: {os.getenv('JAVA_HOME')}")
 print(f"SPARK_HOME: {os.getenv('SPARK_HOME')}")
 print(f"PYTHONPATH: {os.getenv('PYTHONPATH')}")
@@ -13,10 +13,11 @@ try:
 
     print("\nstep1: SPARK import")
 
-    spark = SparkSession.builder \
-        .appName("SparkConnectionTest") \
-        .master("local[*]") \
+    spark = (
+        SparkSession.builder.appName("SparkConnectionTest")
+        .master("local[*]")
         .getOrCreate()
+    )
 
     print("\nstep2: SPARK session OK")
 
@@ -35,6 +36,6 @@ except Exception as e:
     print(f"error: {type(e).__name__}")
     print(f"error: {e}")
 
-    import traceback        #error trace
+    import traceback  # error trace
 
     traceback.print_exc()

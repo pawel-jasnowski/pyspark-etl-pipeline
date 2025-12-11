@@ -1,12 +1,15 @@
 # src/models.py
 from datetime import datetime
 from uuid import UUID
+
 from pydantic import BaseModel, Field, ValidationError
+
 
 class RawTransaction(BaseModel):
     """
     data validation for transaction file.
     """
+
     transaction_id: UUID
     customer_id: UUID
     # Używamy float, bo inferSchema w Sparku wczyta to jako Double.

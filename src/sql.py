@@ -1,11 +1,13 @@
 # src/sql.py
 import logging
 import os
-import psycopg2
-from dotenv import load_dotenv
 from datetime import datetime
 
+import psycopg2
+from dotenv import load_dotenv
+
 load_dotenv()
+
 
 def create_db_connection():
 
@@ -15,8 +17,8 @@ def create_db_connection():
     db_port = os.getenv("DB_PORT")
     db_name = os.getenv("DB_NAME")
 
-    if not all([db_user, db_password, db_host, db_port, db_name ]):
-        raise ValueError (f"ERROR during loading data from .env file")
+    if not all([db_user, db_password, db_host, db_port, db_name]):
+        raise ValueError(f"ERROR during loading data from .env file")
 
     try:
         conn = psycopg2.connect(
@@ -24,7 +26,7 @@ def create_db_connection():
             user=os.getenv("DB_USER"),
             password=os.getenv("DB_PASSWORD"),
             host=os.getenv("DB_HOST"),
-            port=os.getenv("DB_PORT")
+            port=os.getenv("DB_PORT"),
         )
 
         return conn
@@ -38,9 +40,11 @@ def main():
     try:
         conn = create_db_connection()
         with conn.cursor() as cursor:
-            cursor.execute(f"select * from transactions"
-                           f"where alert_reason ='High Risk Country Transaction'"
-                           f"and country_code ='AF';")
+            cursor.execute(
+                f"select * from transactions"
+                f"where alert_reason ='High Risk Country Transaction'"
+                f"and country_code ='AF';"
+            )
             records = cursor.fetchall()
             for row in records:
                 print(row)
