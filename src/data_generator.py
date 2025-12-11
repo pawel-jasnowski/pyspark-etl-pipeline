@@ -2,7 +2,7 @@
 import csv
 import os
 import random
-import uuid  # Universally Unique Identifier ID generator
+import uuid  # Universally Unique Identifier ID generator wow
 from datetime import datetime, timedelta
 
 from faker import Faker

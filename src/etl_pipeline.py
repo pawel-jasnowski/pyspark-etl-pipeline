@@ -1,17 +1,13 @@
 # src/etl_pipeline.py
-import logging
 import os
 import sys
 import traceback
 import zipfile
-from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
-import psycopg2
 from dotenv import load_dotenv
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import (col, current_timestamp, lit, struct, udf,
+from pyspark.sql.functions import (col, lit, struct, udf,
                                    when)
 from pyspark.sql.types import (BooleanType, DecimalType, StringType,
                                StructField, StructType, TimestampType)
@@ -26,7 +22,7 @@ python_executable = sys.executable
 os.environ["PYSPARK_PYTHON"] = python_executable
 os.environ["PYSPARK_DRIVER_PYTHON"] = python_executable
 
-print(f"PYSPARK_PYTHON set to: {python_executable}")
+# print(f"PYSPARK_PYTHON set to: {python_executable}")
 #
 # LOG_DIR = "logs"
 # LOG_FILE = "pipeline.log"
@@ -47,7 +43,7 @@ def zip_source_for_spark(source_dir: str = "src", zip_name: str = "src.zip"):
     Packs the source directory into a zip file for Spark to distribute to workers.
     This ensures that UDFs have access to all necessary modules.
     """
-    print(f"source directory for ZIP '{source_dir}' into '{zip_name}' for Spark...")
+    print(f"preparing zip file for spark workers")
 
     # pathlib to work with paths
     source_path = Path(source_dir)
@@ -55,8 +51,6 @@ def zip_source_for_spark(source_dir: str = "src", zip_name: str = "src.zip"):
 
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
         for file_path in source_path.rglob("*.py"):
-            # Dodajemy plik do zip, zachowując jego względną ścieżkę wewnątrz 'src'
-            # np. 'src/models.py' jest zapisywane jako 'models.py' w archiwum
             zipf.write(file_path, file_path.relative_to(source_path))
 
     print("source code packed successfully")
@@ -79,7 +73,7 @@ def create_spark_session() -> SparkSession:
     Packs the source code and creates a Spark session configured
     to distribute the code to workers.
     """
-    print("creating Spark session")
+    print("creating spark session")
 
     # zip source code
     py_files_zip = zip_source_for_spark()
@@ -109,25 +103,26 @@ validation_schema = StructType(
 @udf(returnType=validation_schema)
 def validate_transaction(struct_col) -> dict:
     """
-    UDF, który przyjmuje wiersz jako strukturę i waliduje go
-    za pomocą modelu Pydantic.
+    UDF user-defined function
     """
     try:
-        # Konwertujemy obiekt Row (strukturę) Sparka na słownik Pythona
+        # SPARK Row to Python dict
         row_dict = struct_col.asDict(recursive=True)
-        # Walidacja za pomocą Pydantic
+        # pydantic validation
         RawTransaction.model_validate(row_dict)
         return {"is_valid": True, "validation_error": None}
     except ValidationError as e:
-        # Zwracamy informację o błędzie w czytelnym formacie JSON
+        # return error in json format
         return {"is_valid": False, "validation_error": e.json()}
     except Exception as e:
-        # Łapiemy inne, nieoczekiwane błędy
+        # unexpected errors
         return {"is_valid": False, "validation_error": f"Unexpected error: {str(e)}"}
 
 
 def find_new_files(directory: str) -> list[str] | None:
-    """finding TRANSACTION files to be processed"""
+    """
+    Finding TRANSACTION files to be processed
+    """
     print(f"searching for files to be processed in {directory}")
     try:
         files = [
@@ -147,7 +142,9 @@ def find_new_files(directory: str) -> list[str] | None:
 
 
 def move_file(source_path: str, success: bool):
-    """move file after processing"""
+    """
+    Move file after processing
+    """
 
     if not source_path:
         return
@@ -155,9 +152,7 @@ def move_file(source_path: str, success: bool):
     os.makedirs("data/done", exist_ok=True)
     os.makedirs("data/error", exist_ok=True)
 
-    file_name = os.path.basename(
-        source_path
-    )  # get the file name out of the source_path
+    file_name = os.path.basename(source_path)  # get the file name out of the source_path
     if success:
         destination_path = "data/done"
     else:
@@ -168,7 +163,9 @@ def move_file(source_path: str, success: bool):
 
 
 def extract_data(spark: SparkSession, file_path: str) -> DataFrame:
-    """read data to spark session"""
+    """
+    Read data to spark session
+    """
 
     df = spark.read.csv(
         path=file_path,
@@ -253,7 +250,9 @@ def transform_data(df: DataFrame) -> (DataFrame, DataFrame, DataFrame):
 
 
 def load_data(df: DataFrame, table_name: str, mode: str = "append"):
-    """saving from dataframe to DB"""
+    """
+    Saving dataframe to DB
+    """
 
     db_url = f"jdbc:postgresql://{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
 
@@ -422,15 +421,15 @@ def main():
             try:
                 raw_df = extract_data(spark, file_path)
 
-                # POPRAWKA: Odbieramy 3 DataFrame'y
+                # 3xdataframe
                 all_transactions_df, alerts_only_df, invalid_records_df = (
                     transform_data(raw_df)
                 )
 
-                # Zapisujemy tylko poprawne transakcje
+                # only correct transactions
                 load_data(all_transactions_df, "transactions", mode="append")
 
-                # Zapisujemy alerty (jeśli istnieją)
+                # only alerts if exists
                 alerts_only_df.cache()
                 alerts_count = alerts_only_df.count()
                 if alerts_count > 0:
@@ -439,7 +438,7 @@ def main():
                 else:
                     print("No alerts found in this file.")
 
-                # Zapisujemy błędne rekordy do kwarantanny (jeśli istnieją)
+                # bad records if exists
                 invalid_records_df.cache()
                 invalid_count = invalid_records_df.count()
                 if invalid_count > 0:
