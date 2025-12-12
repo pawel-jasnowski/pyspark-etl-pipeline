@@ -57,37 +57,6 @@ def transaction_generator(customer_ids: list[str]) -> dict:
     }
 
 
-# def main(num_transactions=100000):        BCKUP
-#     """main transaction generator"""
-#
-#     customer_ids = [str(uuid.uuid4()) for _ in range(100)]  # list of customers id
-#     transactions = [transaction_generator(customer_ids) for _ in range(num_transactions)]
-#
-#     output_dir = "data/raw"
-#     os.makedirs(output_dir, exist_ok=True)
-#
-#     filename = f'TRANSACTIONS_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
-#     filepath = os.path.join(output_dir, filename)
-#
-#     headers = [
-#         "transaction_id",
-#         "customer_id",
-#         "amount",
-#         "currency",
-#         "country_code",
-#         "timestamp",
-#     ]
-#
-#     with open(filepath, "w", newline="") as csvfile:
-#         writer = csv.DictWriter(csvfile, fieldnames=headers, delimiter="|")
-#         writer.writeheader()
-#         writer.writerows(transactions)
-#
-#     print(
-#         f"Transaction file was generated with {num_transactions} transactions to `{filepath}`"
-#     )
-
-
 def main(num_transactions=500000):
     """main transaction generator"""
 
@@ -112,10 +81,10 @@ def main(num_transactions=500000):
         writer = csv.DictWriter(csvfile, fieldnames=headers, delimiter="|")
         writer.writeheader()
         for i in range(num_transactions):
-            writer.writerow(transaction_generator(customer_ids))
+            writer.writerow(transaction_generator(customer_ids))        #saving transactions row-by-row
 
     print(
-        f"Transaction file was generated with {num_transactions} transactions to `{filepath}`"
+        f"transaction file was generated with {num_transactions} transactions to `{filepath}`"
     )
 
 
