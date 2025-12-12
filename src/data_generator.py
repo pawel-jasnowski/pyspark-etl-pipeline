@@ -57,7 +57,7 @@ def transaction_generator(customer_ids: list[str]) -> dict:
     }
 
 
-def main(num_transactions=500000):
+def main(num_transactions=90000):
     """main transaction generator"""
 
     output_dir = "data/raw"
@@ -81,6 +81,8 @@ def main(num_transactions=500000):
         writer = csv.DictWriter(csvfile, fieldnames=headers, delimiter="|")
         writer.writeheader()
         for i in range(num_transactions):
+            if(i+1)%10000 == 0:
+                print(f"transactions generated: {i}")
             writer.writerow(transaction_generator(customer_ids))        #saving transactions row-by-row
 
     print(

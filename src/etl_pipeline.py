@@ -63,6 +63,7 @@ def create_spark_session() -> SparkSession:
         .config("spark.jars.packages", "org.postgresql:postgresql:42.5.0")
         .master("local[*]")
         .config("spark.submit.pyFiles", py_files_zip)
+        .config("spark.driver.memory", "4g")
         .getOrCreate()
     )
 
