@@ -158,6 +158,7 @@ def extract_data(spark: SparkSession, file_path: str) -> DataFrame:
         inferSchema=True,  # Auto-detect data types
         encoding="UTF-8",  # Character encoding
     )
+    df = df.withColumn("source_file", lit(os.path.basename(file_path)))
     return df
 
 
@@ -406,26 +407,13 @@ def main():
                 raw_df = extract_data(spark, file_path)
 
                 # 3xdataframe
-                all_transactions_df, alerts_only_df, invalid_records_df = (
-                    transform_data(raw_df)
-                )
-
-                # only correct transactions
-                load_data(all_transactions_df, "transactions", mode="append")
-
-                # only alerts if exists
-                alerts_only_df.cache()
-                alerts_count = alerts_only_df.count()
-                if alerts_count > 0:
-                    print(f"Found {alerts_count} alerts. Loading to 'alerts' table.")
-                    load_data(alerts_only_df, "alerts", mode="append")
-                else:
-                    print("No alerts found in this file.")
+                all_transactions_df, alerts_only_df, invalid_records_df = transform_data(raw_df)
 
                 # bad records if exists
                 invalid_records_df.cache()
                 invalid_count = invalid_records_df.count()
                 if invalid_count > 0:
+
                     print(
                         f"Found {invalid_count} invalid records. Loading to 'quarantine' table."
                     )
@@ -435,12 +423,26 @@ def main():
                     print(f"schema for quarantine table is:")
                     quarantine_df.printSchema()
                     load_data(quarantine_df, "quarantine", mode="append")
+                    raise ValueError (f"invalid records inside the file") # go to EXCEPT
 
-                move_file(file_path, success=True)
+                else:
+                    # only correct transactions
+                    load_data(all_transactions_df, "transactions", mode="append")
+
+                    # only alerts if exists
+                    alerts_only_df.cache()
+                    alerts_count = alerts_only_df.count()
+                    if alerts_count > 0:
+                        print(f"Found {alerts_count} alerts. Loading to 'alerts' table.")
+                        load_data(alerts_only_df, "alerts", mode="append")
+                    else:
+                        print("No alerts found in this file.")
+
+                    move_file(file_path, success=True)
 
             except Exception as e:
-                print(f"Critical error during processing file: {file_path}")
-                traceback.print_exc()
+                print(f"file: {os.path.basename(file_path)} in invalid. check quarantine table")
+                print(f"reason: {e}")
                 move_file(file_path, success=False)
                 continue
 

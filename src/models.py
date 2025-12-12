@@ -18,6 +18,7 @@ class RawTransaction(BaseModel):
     currency: str = Field(min_length=3, max_length=3)
     country_code: str = Field(min_length=2, max_length=2)
     timestamp: datetime
+    source_file: str
 
     class Config:
         from_attributes = True
