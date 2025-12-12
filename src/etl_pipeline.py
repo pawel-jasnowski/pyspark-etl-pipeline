@@ -7,10 +7,15 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import (col, lit, struct, udf,
-                                   when)
-from pyspark.sql.types import (BooleanType, DecimalType, StringType,
-                               StructField, StructType, TimestampType)
+from pyspark.sql.functions import col, lit, struct, udf, when
+from pyspark.sql.types import (
+    BooleanType,
+    DecimalType,
+    StringType,
+    StructField,
+    StructType,
+    TimestampType,
+)
 
 from config import HIGH_AMOUNT_THRESHOLD, HIGH_RISK_COUNTRIES
 from models import RawTransaction, ValidationError
@@ -21,6 +26,7 @@ python_executable = sys.executable
 # env for this process
 os.environ["PYSPARK_PYTHON"] = python_executable
 os.environ["PYSPARK_DRIVER_PYTHON"] = python_executable
+
 
 def zip_source_for_spark(source_dir: str = "src", zip_name: str = "src.zip"):
     """
@@ -125,7 +131,9 @@ def move_file(source_path: str, success: bool):
     os.makedirs("data/done", exist_ok=True)
     os.makedirs("data/error", exist_ok=True)
 
-    file_name = os.path.basename(source_path)  # get the file name out of the source_path
+    file_name = os.path.basename(
+        source_path
+    )  # get the file name out of the source_path
     if success:
         destination_path = "data/done"
     else:
@@ -149,7 +157,6 @@ def extract_data(spark: SparkSession, file_path: str) -> DataFrame:
     )
     df = df.withColumn("source_file", lit(os.path.basename(file_path)))
     return df
-
 
 
 def transform_data(df: DataFrame) -> (DataFrame, DataFrame, DataFrame):
@@ -227,7 +234,9 @@ def load_data(df: DataFrame, table_name: str, mode: str = "append"):
         traceback.print_exc()
         raise e
 
+
 ##################################### MAIN ##########################################
+
 
 def main():
     print(
@@ -253,7 +262,9 @@ def main():
                 raw_df = extract_data(spark, file_path)
 
                 # 3xdataframe
-                all_transactions_df, alerts_only_df, invalid_records_df = transform_data(raw_df)
+                all_transactions_df, alerts_only_df, invalid_records_df = (
+                    transform_data(raw_df)
+                )
 
                 # bad records if exists
                 invalid_records_df.cache()
@@ -269,7 +280,7 @@ def main():
                     print(f"schema for quarantine table is:")
                     quarantine_df.printSchema()
                     load_data(quarantine_df, "quarantine", mode="append")
-                    raise ValueError (f"invalid records inside the file") # go to EXCEPT
+                    raise ValueError(f"invalid records inside the file")  # go to EXCEPT
 
                 else:
                     # only correct transactions
@@ -279,7 +290,9 @@ def main():
                     alerts_only_df.cache()
                     alerts_count = alerts_only_df.count()
                     if alerts_count > 0:
-                        print(f"Found {alerts_count} alerts. Loading to 'alerts' table.")
+                        print(
+                            f"Found {alerts_count} alerts. Loading to 'alerts' table."
+                        )
                         load_data(alerts_only_df, "alerts", mode="append")
                     else:
                         print("No alerts found in this file.")
@@ -287,7 +300,9 @@ def main():
                     move_file(file_path, success=True)
 
             except Exception as e:
-                print(f"file: {os.path.basename(file_path)} is invalid. check quarantine table")
+                print(
+                    f"file: {os.path.basename(file_path)} is invalid. check quarantine table"
+                )
                 print(f"reason: {e}")
                 move_file(file_path, success=False)
                 continue
