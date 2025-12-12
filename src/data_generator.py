@@ -57,13 +57,11 @@ def transaction_generator(customer_ids):
     }
 
 
-def main(num_transactions=1000):
+def main(num_transactions=100000):
     """main transaction generator"""
 
     customer_ids = [str(uuid.uuid4()) for _ in range(100)]  # list of customers
-    transactions = [
-        transaction_generator(customer_ids) for _ in range(num_transactions)
-    ]  # transaction generator call
+    transactions = [transaction_generator(customer_ids) for _ in range(num_transactions)]  # transaction generator call
 
     output_dir = "data/raw"
     os.makedirs(output_dir, exist_ok=True)
