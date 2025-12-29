@@ -24,6 +24,8 @@ def random_timestamp_generator():
 
     return random_datetime.isoformat()
 
+def transaction_generator(customer_ids):
+    """ transaction_ID , customer_id, amount, country_code, timestamp"""
 
 def transaction_generator(customer_ids: list[str]) -> dict:
     """transaction_ID , customer_id, amount, currency, country_code, timestamp"""
@@ -57,8 +59,8 @@ def transaction_generator(customer_ids: list[str]) -> dict:
     }
 
 
-def main(num_transactions=1000):
-    """main transaction generator"""
+    customer_ids = [str(uuid.uuid4()) for _ in range(100)]          #list of customers - random UUID
+    transactions = [transaction_generator(customer_ids) for _ in range(num_transactions)]   # transaction generator call
 
     output_dir = "data/raw"
     os.makedirs(output_dir, exist_ok=True)
