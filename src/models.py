@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, ValidationError
 class RawTransaction(BaseModel):
     """
     data validation for transaction file
-    Usually Pydantic works with Python DICT types BUT our ROW from SPARK is not a classic dict type
+    Usually Pydantic works with Python DICT types BUT our ROW from SPARK is not a classic dict type,
     so we need class Config here and from_attributes = True to read those object properly
     """
 

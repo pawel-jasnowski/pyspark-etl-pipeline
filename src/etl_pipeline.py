@@ -28,7 +28,7 @@ os.environ["PYSPARK_PYTHON"] = python_executable
 os.environ["PYSPARK_DRIVER_PYTHON"] = python_executable
 
 
-def zip_source_for_spark(source_dir: str = "src", zip_name: str = "src.zip"):
+def zip_source_for_spark(source_dir: str = "src", zip_name: str = "src.zip") -> str:
     """
     Packs the source directory into a zip file for Spark to distribute to workers.
     This ensures that UDFs have access to all necessary modules.
