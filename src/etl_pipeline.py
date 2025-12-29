@@ -1,5 +1,7 @@
 # src/etl_pipeline.py
 import os
+import sys
+import zipfile
 import logging
 # import datetime from datetime
 from pyspark.sql import SparkSession, DataFrame
@@ -19,6 +21,7 @@ from pyspark.sql.types import (
 
 from config import HIGH_AMOUNT_THRESHOLD, HIGH_RISK_COUNTRIES
 from models import RawTransaction, ValidationError
+from pathlib import Path
 
 load_dotenv()
 
