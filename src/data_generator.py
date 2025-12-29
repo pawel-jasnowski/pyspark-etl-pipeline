@@ -57,7 +57,7 @@ def transaction_generator(customer_ids: list[str]) -> dict:
     }
 
 
-def main(num_transactions=90000):
+def main(num_transactions=1000):
     """main transaction generator"""
 
     output_dir = "data/raw"
