@@ -18,7 +18,6 @@ This project demonstrates a full cycle of data engineering best practices, from 
 *   **Rule-Based Alerting:** Identifies suspicious transactions based on configurable rules (e.g., high transaction amounts, transactions involving high-risk countries).
 *   **Resilient Error Handling:** Fault-tolerant design ensures that an error in one file does not stop the entire process. Failed files are automatically moved to an `error` directory for investigation, while successful ones are archived in `done`.
 *   **Database Integration:** Loads processed data into a PostgreSQL database, automatically creating separate tables for all transactions (`transactions`) and identified alerts (`alerts`).
-*   **Professional Logging:** Implements comprehensive logging to both console and a file (`logs/pipeline.log`) for easy monitoring and debugging.
 *   **Containerized Environment:** The entire database environment is managed by Docker and Docker Compose, ensuring consistency and ease of setup.
 
 ---
@@ -29,11 +28,6 @@ This project demonstrates a full cycle of data engineering best practices, from 
 *   **Core Processing Engine:** Apache Spark (PySpark) 3.5.x
 *   **Database:** PostgreSQL (running in a Docker container)
 *   **Containerization:** Docker & Docker Compose
-*   **Key Python Libraries:**
-    *   `pyspark`: For data processing.
-    *   `psycopg2-binary`: For database connectivity and schema migration.
-    *   `python-dotenv`: For managing environment variables.
-    *   `faker`: For generating realistic synthetic data.
 
 ---
 
@@ -93,8 +87,8 @@ This project demonstrates a full cycle of data engineering best practices, from 
     ```
     This will start the PostgreSQL container in the background.
 
-2.  **Generate sample data (optional):**
-    *   The pipeline processes files from the `data/raw` directory. To generate some sample data, run the data generator script:
+2.  **Generate sample data:**
+    *   The pipeline processes files from the `data/raw` directory. Data generator is set to '1000' transactions as default. To generate some sample data, run the data generator script:
     ```bash
     python src/data_generator.py
     ```
@@ -110,8 +104,7 @@ This project demonstrates a full cycle of data engineering best practices, from 
 4.  **Check the results:**
     *   You can connect to the PostgreSQL database using any SQL client (like DBeaver) with the credentials from your `.env` file.
     *   Inspect the `transactions` and `alerts` tables.
-    *   Check the `logs/pipeline.log` file for detailed information about the run.
-
+   
 5.  **Stop the database:**
     *   When you are finished, you can stop the database container:
     ```bash
