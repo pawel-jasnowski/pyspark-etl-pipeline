@@ -2,27 +2,19 @@
 import os
 import sys
 import zipfile
-import logging
-# import datetime from datetime
-from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql.functions import col, when, lit
-from pyspark.sql.types import DecimalType, TimestampType
+from pathlib import Path
+
 from dotenv import load_dotenv
+# import datetime from datetime
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import col, lit, struct, udf, when
-from pyspark.sql.functions import sum as spark_sum
-from pyspark.sql.types import (
-    BooleanType,
-    DecimalType,
-    StringType,
-    StructField,
-    StructType,
-    TimestampType,
-)
+from pyspark.sql.functions import col, lit, struct
+from pyspark.sql.functions import udf, when
+from pyspark.sql.types import (BooleanType, DecimalType, StringType,
+                               StructField, StructType, TimestampType)
 
 from config import HIGH_AMOUNT_THRESHOLD, HIGH_RISK_COUNTRIES
 from models import RawTransaction, ValidationError
-from pathlib import Path
+from typing import Optional, Tuple
 
 load_dotenv()
 
@@ -164,99 +156,52 @@ def extract_data(spark: SparkSession, file_path: str) -> DataFrame:
     return df
 
 
-# def transform_data(df: DataFrame) -> (DataFrame, DataFrame, DataFrame):
-#     print("Starting Pydantic validation...")
-#     df_with_validation = df.withColumn(
-#         "validation_result", validate_transaction(struct(*df.columns))
-#     )
-#
-#     valid_df = df_with_validation.filter(
-#         col("validation_result.is_valid") == True
-#     ).drop("validation_result")
-#     invalid_df = df_with_validation.filter(
-#         col("validation_result.is_valid") == False
-#     ).select(
-#         *df.columns, col("validation_result.validation_error").alias("error_details")
-#     )
-#
-#     valid_df.cache()
-#     invalid_df.cache()
-#     valid_count = valid_df.count()
-#     invalid_count = invalid_df.count()
-#     print(
-#         f"Validation finished. Valid rows: {valid_count}, Invalid rows: {invalid_count}"
-#     )
-#
-#     if invalid_count > 0:
-#         print("Found invalid records. Sample of errors (JSON format):")
-#         invalid_df.select("error_details").show(truncate=False)
-#
-#     print("Transforming valid data...")
-#     transformed_df = valid_df.withColumn(
-#         "amount", col("amount").cast(DecimalType(18, 2))
-#     ).withColumn("timestamp", col("timestamp").cast(TimestampType()))
-#
-#     alerts_logic = (
-#         when(col("amount") > HIGH_AMOUNT_THRESHOLD, "High Amount Transaction")
-#         .when(
-#             col("country_code").isin(HIGH_RISK_COUNTRIES),
-#             "High Risk Country Transaction",
-#         )
-#         .otherwise(lit(None))
-#     )
-#
-#     df_with_alerts = transformed_df.withColumn("alert_reason", alerts_logic)
-#     alerts_df = df_with_alerts.filter(col("alert_reason").isNotNull())
-#     print("Transformation finished.")
-#     return df_with_alerts, alerts_df, invalid_df
-#
+def transform_data(df: DataFrame) -> Tuple[DataFrame, DataFrame, DataFrame]:
+    print("Starting Pydantic validation...")
+    df_with_validation = df.withColumn(
+        "validation_result", validate_transaction(struct(*df.columns))
+    )
 
+    valid_df = df_with_validation.filter(
+        col("validation_result.is_valid") == True
+    ).drop("validation_result")
+    invalid_df = df_with_validation.filter(
+        col("validation_result.is_valid") == False
+    ).select(
+        *df.columns, col("validation_result.validation_error").alias("error_details")
+    )
 
-
-def transform_data(df: DataFrame) -> (DataFrame, DataFrame, DataFrame):
-    """
-    Waliduje dane w bardziej wydajny sposób, używając jednej akcji do zliczania.
-    """
-    logging.info("Starting Pydantic validation...")
-
-    # 1. Walidacja za pomocą UDF
-    df_with_validation = df.withColumn("validation_result", validate_transaction(struct(*df.columns)))
-
-    # 2. CACHE'UJEMY DataFrame Z WYNIKIEM WALIDACJI - kluczowa optymalizacja
-    df_with_validation.cache()
-
-    # 3. ZLICZAMY POPRAWNE I BŁĘDNE WIERSZE ZA JEDNYM ZAMACHEM
-    validation_counts = df_with_validation.agg(
-        spark_sum(when(col("validation_result.is_valid") == True, 1).otherwise(0)).alias("valid_count"),
-        spark_sum(when(col("validation_result.is_valid") == False, 1).otherwise(0)).alias("invalid_count")
-    ).first()
-
-    valid_count = validation_counts["valid_count"]
-    invalid_count = validation_counts["invalid_count"]
-    logging.info(f"Validation finished. Valid rows: {valid_count}, Invalid rows: {invalid_count}")
-
-    # 4. FILTRUJEMY DANE (teraz Spark użyje cache'a, nie będzie przeliczał od nowa)
-    valid_df = df_with_validation.filter(col("validation_result.is_valid") == True).drop("validation_result")
-    invalid_df = df_with_validation.filter(col("validation_result.is_valid") == False).select(
-        *df.columns,
-        col("validation_result.validation_error").alias("error_details")
+    valid_df.cache()
+    invalid_df.cache()
+    valid_count = valid_df.count()
+    invalid_count = invalid_df.count()
+    print(
+        f"Validation finished. Valid rows: {valid_count}, Invalid rows: {invalid_count}"
     )
 
     if invalid_count > 0:
-        logging.warning("Found invalid records. Sample of errors (JSON format):")
+        print("Found invalid records. Sample of errors (JSON format):")
         invalid_df.select("error_details").show(truncate=False)
 
-    # --- Dalsze przetwarzanie (bez zmian) ---
-    logging.info("Transforming valid data...")
-    transformed_df = valid_df.withColumn("amount", col("amount").cast(DecimalType(18, 2))) \
-        .withColumn("timestamp", col("timestamp").cast(TimestampType()))
+    print("Transforming valid data...")
+    transformed_df = valid_df.withColumn(
+        "amount", col("amount").cast(DecimalType(18, 2))
+    ).withColumn("timestamp", col("timestamp").cast(TimestampType()))
 
-    alerts_logic = when(...)  # Twoja logika
+    alerts_logic = (
+        when(col("amount") > HIGH_AMOUNT_THRESHOLD, "High Amount Transaction")
+        .when(
+            col("country_code").isin(HIGH_RISK_COUNTRIES),
+            "High Risk Country Transaction",
+        )
+        .otherwise(lit(None))
+    )
+
     df_with_alerts = transformed_df.withColumn("alert_reason", alerts_logic)
     alerts_df = df_with_alerts.filter(col("alert_reason").isNotNull())
-
-    logging.info("Transformation finished.")
+    print("Transformation finished.")
     return df_with_alerts, alerts_df, invalid_df
+
 
 def load_data(df: DataFrame, table_name: str, mode: str = "append"):
     """
@@ -283,6 +228,7 @@ def load_data(df: DataFrame, table_name: str, mode: str = "append"):
 
     except Exception as e:
         print(f"exception: {e} - saving to db failed for table: '{table_name}' ")
+        import traceback
         traceback.print_exc()
         raise e
 

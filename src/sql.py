@@ -1,13 +1,11 @@
 # src/sql.py
-import logging
 import os
-from datetime import datetime
+# from datetime import datetime
 
-import psycopg2
+import psycopg2 #type: ignore
 from dotenv import load_dotenv
 
 load_dotenv()
-
 
 def create_db_connection():
 
@@ -39,18 +37,36 @@ def main():
 
     try:
         conn = create_db_connection()
-        with conn.cursor() as cursor:
+        with conn.cursor() as cursor: # context manager
             cursor.execute(
                 f"select * from transactions"
-                f"where alert_reason ='High Risk Country Transaction'"
-                f"and country_code ='AF';"
+                f" where alert_reason ='High Risk Country Transaction'"
+                f" and country_code ='AF';"
             )
             records = cursor.fetchall()
             for row in records:
                 print(row)
-                print("closing context manager")
+            print("closing context manager")
+
+            ############################ using parameters
+
+            # query = """
+            #                SELECT *
+            #                FROM transactions
+            #                WHERE alert_reason = %s
+            #                AND country_code = %s;
+            #            """
+            # params = ("High Risk Country Transaction", "AF")
+            #
+            # cursor.execute(query, params)
+            # # ---------------------
+            #
+            # records = cursor.fetchall()
+
+            #########################################3
+
     except psycopg2.Error as e:
-        print("error: {e}")
+        print(f"error: {e}")
     finally:
         if conn:
             conn.close()

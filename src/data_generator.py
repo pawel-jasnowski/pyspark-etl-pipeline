@@ -81,9 +81,11 @@ def main(num_transactions=1000):
         writer = csv.DictWriter(csvfile, fieldnames=headers, delimiter="|")
         writer.writeheader()
         for i in range(num_transactions):
-            if(i+1)%10000 == 0:
+            if (i + 1) % 10000 == 0:
                 print(f"transactions generated: {i}")
-            writer.writerow(transaction_generator(customer_ids))        #saving transactions row-by-row
+            writer.writerow(
+                transaction_generator(customer_ids)
+            )  # saving transactions row-by-row
 
     print(
         f"transaction file was generated with {num_transactions} transactions to `{filepath}`"

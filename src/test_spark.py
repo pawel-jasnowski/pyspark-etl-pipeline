@@ -1,7 +1,14 @@
 # # src/test_spark.py
 import os
+import sys
+
+python_executable_path = sys.executable
+
+os.environ["PYSPARK_PYTHON"] = python_executable_path
+os.environ["PYSPARK_DRIVER_PYTHON"] = python_executable_path
 
 print("SPARK test")
+print(f"!!! Forcing PYSPARK_PYTHON to: {python_executable_path}")
 
 # env
 print(f"JAVA_HOME: {os.getenv('JAVA_HOME')}")

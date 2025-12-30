@@ -4,7 +4,7 @@ psycopg2-binary
 python-dotenv
 Faker
 pydantic
-
+data-science-types
 
 # Libraries
 sqlalchemy
