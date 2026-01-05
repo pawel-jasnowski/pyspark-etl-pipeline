@@ -93,17 +93,23 @@ This project demonstrates a full cycle of data engineering best practices, from 
     python src/data_generator.py
     ```
     You can run this multiple times to create several files for batch processing.
-
+    You can manually put some bad records to test this pipe line. 
 3.  **Run the ETL pipeline:**
     *   Execute the main pipeline script:
     ```bash
     python src/etl_pipeline.py
     ```
+    or (for log file)
+     ```bash
+    python src/etl_pipeline.py > logs/pipeline.log 2>&1
+    ```
+4. 
     The script will find all files in `data/raw`, process them, load the data into the database, and move the files to `data/done` or `data/error`.
 
 4.  **Check the results:**
     *   You can connect to the PostgreSQL database using any SQL client (like DBeaver) with the credentials from your `.env` file.
     *   Inspect the `transactions` and `alerts` tables.
+    *   Use sql.py to test DB connection and some queries
    
 5.  **Stop the database:**
     *   When you are finished, you can stop the database container:
@@ -115,10 +121,4 @@ This project demonstrates a full cycle of data engineering best practices, from 
 
 ## 💡 Future Enhancements (Version 2.0 Roadmap)
 
-This project provides a solid foundation that can be extended with more advanced features. The following are planned for the next version:
-
-*   **Input Data Validation with Pydantic:** Implement a proactive data validation layer using `Pydantic` to define a "data contract". This will allow the pipeline to reject malformed or incomplete records at the very beginning of the transformation stage and move them to a quarantine table.
-*   **Advanced Analytical Layer:** Create a separate `reporting.py` script that uses `SQLAlchemy` and `pandas` to connect to the database, run complex analytical SQL queries (e.g., using window functions to analyze customer behavior), and generate visualizations with `Matplotlib`.
-*   **Data Enrichment:** Introduce a `customers` dimension table and enrich the transaction data by performing a `JOIN` in Spark. This will enable more complex business rules, such as "flag a transaction if it's from a newly registered customer".
-*   **Unit & Integration Testing:** Add a suite of tests using `pytest` to verify the logic of the transformation functions and ensure the pipeline's reliability.
-*   **Full Containerization & Orchestration:** Dockerize the Python application itself and use **Apache Airflow** to orchestrate the entire workflow (e.g., run the data generator and then the ETL pipeline on a schedule).
+This project provides a solid foundation that can be extended with more advanced features.
